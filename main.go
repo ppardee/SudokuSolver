@@ -36,11 +36,11 @@ func main() {
 			fmt.Printf("Pass %v\n", passCounter)
 			fmt.Println("----------")
 
-			ssClearCount = solver.SimpleSolve(&puzzle)
+			ssClearCount = puzzle.SimpleSolve()
 
 			fmt.Printf("Pass %v cleared %v cells!", passCounter, ssClearCount)
 
-			solver.PrintPuzzle(&puzzle)
+			puzzle.PrintPuzzle()
 
 			if ssClearCount == 0 {
 				if puzzle.UnknownCount > 0 {
@@ -56,12 +56,12 @@ func main() {
 
 		for {
 			fmt.Println("Running complexSolve")
-			csClearCount = solver.ComplexSolve(&puzzle)
-			solver.PrintPuzzle(&puzzle)
+			csClearCount = puzzle.ComplexSolve()
+			puzzle.PrintPuzzle()
 			if csClearCount == 0 {
 				if unknownCount > 0 {
 					fmt.Printf("complexSolve failed with %v cells unsolved. Running SimpleSolve again\n", unknownCount)
-					ssClearCount = solver.SimpleSolve(&puzzle)
+					ssClearCount = puzzle.SimpleSolve()
 					break
 				} else {
 					fmt.Println("Solve complete!")
@@ -70,11 +70,11 @@ func main() {
 			}
 		}
 		if csClearCount == 0 && ssClearCount == 0 {
-			solver.PrintPuzzle(&puzzle)
+			puzzle.PrintPuzzle()
 			fmt.Println("Made no progress this round, exiting")
 			break
 		} else {
-			solver.PrintPuzzle(&puzzle)
+			puzzle.PrintPuzzle()
 			fmt.Println("Making another pass!")
 		}
 	}
@@ -82,44 +82,51 @@ func main() {
 }
 
 func init() {
+	diff := 1
+	var p *[9][9]int
 
-	// This is the initial state of the puzzle we're trying to solve
-	easy := [9][9]int{
-		{0, 8, 0, 7, 0, 9, 0, 0, 2},
-		{0, 3, 4, 0, 1, 0, 0, 9, 0},
-		{0, 0, 0, 3, 0, 8, 0, 0, 0},
-		{0, 0, 6, 4, 3, 0, 8, 0, 1},
-		{0, 0, 1, 2, 7, 6, 0, 4, 0},
-		{0, 0, 3, 0, 0, 1, 2, 5, 6},
-		{0, 0, 0, 0, 9, 0, 0, 2, 7},
-		{3, 4, 0, 8, 6, 7, 9, 0, 0},
-		{0, 9, 0, 5, 0, 4, 0, 0, 3},
+	switch diff {
+	case 1:
+		easy := [9][9]int{
+			{0, 8, 0, 7, 0, 9, 0, 0, 2},
+			{0, 3, 4, 0, 1, 0, 0, 9, 0},
+			{0, 0, 0, 3, 0, 8, 0, 0, 0},
+			{0, 0, 6, 4, 3, 0, 8, 0, 1},
+			{0, 0, 1, 2, 7, 6, 0, 4, 0},
+			{0, 0, 3, 0, 0, 1, 2, 5, 6},
+			{0, 0, 0, 0, 9, 0, 0, 2, 7},
+			{3, 4, 0, 8, 6, 7, 9, 0, 0},
+			{0, 9, 0, 5, 0, 4, 0, 0, 3},
+		}
+		p = &easy
+	case 2:
+		medium := [9][9]int{
+			{1, 3, 0, 6, 8, 5, 0, 0, 0},
+			{0, 0, 0, 0, 0, 0, 0, 0, 2},
+			{0, 6, 0, 0, 1, 9, 0, 3, 8},
+			{0, 0, 1, 0, 0, 0, 0, 4, 0},
+			{0, 5, 0, 4, 0, 3, 0, 0, 0},
+			{3, 0, 0, 8, 0, 0, 0, 0, 6},
+			{4, 2, 7, 5, 6, 0, 9, 0, 0},
+			{0, 0, 5, 0, 0, 2, 0, 8, 0},
+			{0, 8, 0, 0, 0, 7, 0, 0, 0},
+		}
+		p = &medium
+	default:
+		hard := [9][9]int{
+			{0, 8, 0, 7, 0, 9, 0, 0, 2},
+			{0, 3, 4, 0, 1, 0, 0, 9, 0},
+			{0, 0, 0, 3, 0, 8, 0, 0, 0},
+			{0, 0, 6, 0, 3, 0, 8, 0, 1},
+			{0, 0, 1, 2, 7, 0, 0, 4, 0},
+			{0, 0, 3, 0, 0, 1, 2, 5, 6},
+			{0, 0, 0, 0, 0, 0, 0, 2, 7},
+			{3, 4, 0, 8, 6, 7, 9, 0, 0},
+			{0, 9, 0, 5, 0, 4, 0, 0, 3},
+		}
+		p = &hard
 	}
 
-	// medium := [9][9]int{
-	// 	{1, 3, 0, 6, 8, 5, 0, 0, 0},
-	// 	{0, 0, 0, 0, 0, 0, 0, 0, 2},
-	// 	{0, 6, 0, 0, 1, 9, 0, 3, 8},
-	// 	{0, 0, 1, 0, 0, 0, 0, 4, 0},
-	// 	{0, 5, 0, 4, 0, 3, 0, 0, 0},
-	// 	{3, 0, 0, 8, 0, 0, 0, 0, 6},
-	// 	{4, 2, 7, 5, 6, 0, 9, 0, 0},
-	// 	{0, 0, 5, 0, 0, 2, 0, 8, 0},
-	// 	{0, 8, 0, 0, 0, 7, 0, 0, 0},
-	// }
-
-	// hard := [9][9]int{
-	// 	{0, 8, 0, 7, 0, 9, 0, 0, 2},
-	// 	{0, 3, 4, 0, 1, 0, 0, 9, 0},
-	// 	{0, 0, 0, 3, 0, 8, 0, 0, 0},
-	// 	{0, 0, 6, 0, 3, 0, 8, 0, 1},
-	// 	{0, 0, 1, 2, 7, 0, 0, 4, 0},
-	// 	{0, 0, 3, 0, 0, 1, 2, 5, 6},
-	// 	{0, 0, 0, 0, 0, 0, 0, 2, 7},
-	// 	{3, 4, 0, 8, 6, 7, 9, 0, 0},
-	// 	{0, 9, 0, 5, 0, 4, 0, 0, 3},
-	// }
-
-	puzzle = *solver.NewSudokuPuzzle(&easy)
+	puzzle = *solver.NewSudokuPuzzle(p)
 
 }
