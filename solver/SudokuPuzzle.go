@@ -15,42 +15,41 @@ const nine = 1 << 8
 // We're dealing with 9 bits, 255 + 256 = 511
 const allOnes = 511
 
-// var puzzle [9][9]int
-
-// // Creating a guesses matrix for complex solves
-// var guesses [9][9]int
-
-// We need to know how many cells are left to solve so we know when we are done/stuck
-var unknownCount int
+// SudokuPuzzle represents the state of a puzzle
+type SudokuPuzzle struct {
+	Puzzle       [9][9]int
+	Guesses      [9][9]int
+	UnknownCount int
+}
 
 // PrintPuzzle prints the puzzle to the console
-func PrintPuzzle(puzzle *[9][9]int) {
+func (s *SudokuPuzzle) PrintPuzzle() {
 	//reader := bufio.NewReader(os.Stdin)
 	fmt.Printf("\nCurrent state of puzzle\n\n")
 
 	for row := 0; row < 9; row++ {
-		fmt.Println(puzzle[row])
+		fmt.Println(s.Puzzle[row])
 	}
 	fmt.Println("")
 	//fmt.Println("Press Enter to continue")
 	//reader.ReadString('\n')
 }
 
-// SimpleSolve takes the current state of a puzzle, the current guesses and returns the number of unknownCells solved and the number remaining
-func SimpleSolve(puzzle *[9][9]int, guesses *[9][9]int) (int, int) {
-	startCount := unknownCount
+// SimpleSolve attempts to solve the puzzle and returns the number of unknownCells solved
+func (s *SudokuPuzzle) SimpleSolve() int {
+	startCount := s.UnknownCount
 
 	for row := 1; row < 10; row++ {
 		for col := 1; col < 10; col++ {
 
 			rowIdx, colIdx := row-1, col-1
 
-			if puzzle[rowIdx][colIdx] != 0 {
+			if s.Puzzle[rowIdx][colIdx] != 0 {
 				// If the value is already set, move on
 				//fmt.Printf("Cell [%v, %v] started as %v\n", row, col, puzzle[rowIdx][colIdx])
 			} else {
 				// Get the bit-wise representation of each row, column and nonant
-				rowBits, colBits, nonantBits := puzzleParser(puzzle, row, col)
+				rowBits, colBits, nonantBits := puzzleParser(&s.Puzzle, row, col)
 
 				// Bitwise OR together all the results to get a complete list of numbers used in the relevant areas
 				used := rowBits | colBits | nonantBits
@@ -60,7 +59,7 @@ func SimpleSolve(puzzle *[9][9]int, guesses *[9][9]int) (int, int) {
 				comp := allOnes &^ used
 
 				// Store the numbers that can fit
-				guesses[rowIdx][colIdx] = comp
+				s.Guesses[rowIdx][colIdx] = comp
 
 				// Get a slice of the possibilities in numerical representation from the bit representation
 				p := bitsToInts(comp)
@@ -68,21 +67,21 @@ func SimpleSolve(puzzle *[9][9]int, guesses *[9][9]int) (int, int) {
 				if len(p) == 1 {
 					// If there is only one possibility, set the cell to that value and decrement the unknown count
 					fmt.Printf("Setting Cell [%v, %v] to %v\n", row, col, p[0])
-					puzzle[rowIdx][colIdx] = p[0]
-					unknownCount--
-					fmt.Printf("Unknown count now %v\n", unknownCount)
+					s.Puzzle[rowIdx][colIdx] = p[0]
+					s.UnknownCount--
+					fmt.Printf("Unknown count now %v\n", s.UnknownCount)
 				} else {
 					fmt.Printf("Cell [%v, %v] could be %v\n", row, col, bitsToInts(comp))
 				}
 			}
 		}
 	}
-	return startCount - unknownCount, unknownCount
+	return startCount - s.UnknownCount
 }
 
-// ComplexSolve takes the current state of a puzzle, the current guesses and returns the number of unknownCells solved
-func ComplexSolve(puzzle *[9][9]int, guesses *[9][9]int) (int, int) {
-	startCount := unknownCount
+// ComplexSolve attempts to solve the puzzle and returns the number of unknownCells solved
+func (s *SudokuPuzzle) ComplexSolve() int {
+	startCount := s.UnknownCount
 	// TODO: handle the state where there is a possible but not definitive solution
 	// Example:
 	// Cell [4, 1] could be [4 9]
@@ -95,7 +94,7 @@ func ComplexSolve(puzzle *[9][9]int, guesses *[9][9]int) (int, int) {
 		for col := 1; col < 10; col++ {
 			rowIdx, colIdx := row-1, col-1
 
-			if puzzle[rowIdx][colIdx] == 0 {
+			if s.Puzzle[rowIdx][colIdx] == 0 {
 				// First we want to check to see if any of the cell's "siblings" to see if this cell has an exclusive guess
 
 				// Get the bit-wise representation of each row, column and nonant
@@ -103,14 +102,14 @@ func ComplexSolve(puzzle *[9][9]int, guesses *[9][9]int) (int, int) {
 
 				// We need to find all of the unsolved sibling cells and then OR their guess bits together
 				for i := 0; i < 9; i++ {
-					if i != colIdx && len(bitsToInts(guesses[rowIdx][i])) > 1 {
-						rowBits = rowBits | guesses[rowIdx][i]
+					if i != colIdx && len(bitsToInts(s.Guesses[rowIdx][i])) > 1 {
+						rowBits = rowBits | s.Guesses[rowIdx][i]
 					}
 				}
 
 				for i := 0; i < 9; i++ {
-					if i != rowIdx && len(bitsToInts(guesses[i][colIdx])) > 1 {
-						colBits = colBits | guesses[i][colIdx]
+					if i != rowIdx && len(bitsToInts(s.Guesses[i][colIdx])) > 1 {
+						colBits = colBits | s.Guesses[i][colIdx]
 					}
 				}
 
@@ -121,15 +120,15 @@ func ComplexSolve(puzzle *[9][9]int, guesses *[9][9]int) (int, int) {
 					for j := 0; j < 3; j++ {
 						nRowIdx := nonantRowStart + i
 						nColIdx := nonantColStart + j
-						if nRowIdx != rowIdx && nColIdx != colIdx && len(bitsToInts(guesses[nRowIdx][nColIdx])) > 1 {
-							nonantBits = nonantBits | guesses[nRowIdx][nColIdx]
+						if nRowIdx != rowIdx && nColIdx != colIdx && len(bitsToInts(s.Guesses[nRowIdx][nColIdx])) > 1 {
+							nonantBits = nonantBits | s.Guesses[nRowIdx][nColIdx]
 						}
 					}
 				}
 
 				// Bitwise OR together all the results to get a complete list of guesses in the relevant areas
 				allGuesses := rowBits | colBits | nonantBits
-				thisCellsGuessSlice := bitsToInts(guesses[rowIdx][colIdx])
+				thisCellsGuessSlice := bitsToInts(s.Guesses[rowIdx][colIdx])
 				var refinedGuesses []int
 
 				for _, v := range thisCellsGuessSlice {
@@ -141,19 +140,24 @@ func ComplexSolve(puzzle *[9][9]int, guesses *[9][9]int) (int, int) {
 				if len(refinedGuesses) == 1 {
 					// If there is only one possibility, set the cell to that value and decrement the unknown count
 					fmt.Printf("Setting Cell [%v, %v] to %v\n", row, col, refinedGuesses[0])
-					puzzle[rowIdx][colIdx] = refinedGuesses[0]
-					unknownCount--
-					fmt.Printf("Unknown count now %v\n", unknownCount)
+					s.Puzzle[rowIdx][colIdx] = refinedGuesses[0]
+					s.UnknownCount--
+					fmt.Printf("Unknown count now %v\n", s.UnknownCount)
 				}
 			}
 		}
 	}
-	return startCount - unknownCount, unknownCount
+	return startCount - s.UnknownCount
 }
 
-// InitializeGuesses returns a guesses matrix based on the state of the puzzle
-func InitializeGuesses(puzzle *[9][9]int) *[9][9]int {
+// NewSudokuPuzzle returns a populated SudokuPuzzle
+func NewSudokuPuzzle(puzzle *[9][9]int) *SudokuPuzzle {
 	// Initializing guesses with values provided from the puzzle
+	ret := SudokuPuzzle{
+		Puzzle:       *puzzle,
+		UnknownCount: 0,
+	}
+
 	guesses := [9][9]int{}
 	for i := 0; i < 9; i++ {
 		for j := 0; j < 9; j++ {
@@ -161,11 +165,12 @@ func InitializeGuesses(puzzle *[9][9]int) *[9][9]int {
 
 			if puzzle[i][j] == 0 {
 				// Counting the known unknowns!
-				unknownCount++
+				ret.UnknownCount++
 			}
 		}
 	}
-	return &guesses
+	ret.Guesses = guesses
+	return &ret
 }
 
 // Gets the bit representation for the row, column and nonant (like a quadrant, but there are nine instead of four segments)
